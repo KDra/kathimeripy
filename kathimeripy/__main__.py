@@ -1,5 +1,6 @@
 import locale
 import smtplib
+import sys
 from datetime import datetime as dt
 from datetime import timedelta as td
 from email.mime.application import MIMEApplication
@@ -13,6 +14,7 @@ import pypub
 import requests
 import typer
 from bs4 import BeautifulSoup
+from crontab import CronTab
 from joblib import Parallel, delayed
 from rss_parser import RSSParser
 
@@ -157,5 +159,15 @@ def configure(
         with _config_paths[1].open("w") as f:
             dump(cfg, f, indent=4, ensure_ascii=False)
             print(f"Config successfully written in '{_config_paths[1]}'")
+
+@app.command()
+def schedule(hour: int=8, minute: int=0):
+    assert (0 <= hour < 24) and (0 <= minute < 60), f"Invalid time: '{hour:02d}:{minute:02d}'"
+    with CronTab(user=True) as cron:
+        cron.remove_all(command=sys.executable)
+        job = cron.new(command=f'{sys.executable} -m kathimeripy run')
+        job.hour.on(hour)
+        job.minute.on(minute)
+    print(f"Set to run every day at: '{hour:02d}:{minute:02d}'")
 
 app()
