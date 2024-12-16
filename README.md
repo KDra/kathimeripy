@@ -45,3 +45,4 @@ The configuration file is in JSON format and should contain the following keys:
 ## Usage
 
 To fetch and send the news to your Kindle, simply run: `python -m kathimeripy run`
+Or, you can also use the `python -m kathimeripy schedule` command to run it daily through crontab. By default this is run at 08:00 every day.
