@@ -22,6 +22,7 @@ joblib = "^1.4.2"
 epub = "^0.5.2"
 pypub3 = "^2.0.7"
 typer = "^0.15.1"
+python-crontab = "^3.2.0"
 
 
 [build-system]
