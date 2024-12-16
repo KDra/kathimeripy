@@ -17,6 +17,8 @@ from joblib import Parallel, delayed
 from rss_parser import RSSParser
 
 _APP_NAME = Path(__file__).parent.name
+print(f"Running {_APP_NAME}")
+
 _config_paths = [
     Path.home() / f".config/{_APP_NAME}/config.json",
     Path().absolute() / "config.json",
