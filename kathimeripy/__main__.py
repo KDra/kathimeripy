@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 from crontab import CronTab
 from joblib import Parallel, delayed
 from rss_parser import RSSParser
+from typing_extensions import Annotated
 
 _APP_NAME = Path(__file__).parent.name
 print(f"Running {_APP_NAME}")
@@ -25,6 +26,40 @@ _config_paths = [
     Path.home() / f".config/{_APP_NAME}/config.json",
     Path().absolute() / "config.json",
 ]
+
+_allowed_categories = set(
+    [
+        "HARVARD",
+        "Αθλητισμος",
+        "Αμυνα",
+        "Αποψεις",
+        "Αστυνομικο",
+        "Ατζεντα",
+        "Βιβλιο",
+        "Γαστρονομος",
+        "Γραφηματα",
+        "Διεθνης Οικονομια",
+        "Δικαστικο",
+        "Εκπαιδευση",
+        "Ελληνικη Οικονομια",
+        "Εξωτερικη Πολιτικη",
+        "Επιστημη",
+        "Επιχειρησεις",
+        "Ιστορια",
+        "Κοινωνια",
+        "Κοσμος",
+        "Κυβερνηση",
+        "Με την «Κ»",
+        "Οικονομια",
+        "Περιοδικο «Κ»",
+        "Πολιτικη",
+        "Πολιτισμος",
+        "Στηλες",
+        "Ταξιδια",
+        "Υγεια",
+    ]
+)
+
 
 def _process_configs(config_paths, _config_creation=False):
     config = {}
@@ -39,6 +74,20 @@ def _process_configs(config_paths, _config_creation=False):
             "ERROR: Config has not been properly defined. Please run the 'configure' command.",
         )
     return config
+
+
+def _save_config(cfg, global_save=True):
+    if global_save:
+        _config_paths[0].parent.mkdir(parents=True, exist_ok=True)
+        with _config_paths[0].open("w") as f:
+            dump(cfg, f, indent=4, ensure_ascii=False)
+            print(f"Config successfully written in '{_config_paths[0]}'")
+    else:
+        _config_paths[1].parent.mkdir(parents=True, exist_ok=True)
+        with _config_paths[1].open("w") as f:
+            dump(cfg, f, indent=4, ensure_ascii=False)
+            print(f"Config successfully written in '{_config_paths[1]}'")
+
 
 def _key_getter(x, categories):
     for idx, cat in enumerate(categories):
@@ -61,7 +110,9 @@ def _get_chapters(sess, item):
     ]
     return pypub.create_chapter_from_text(article.text, title=title)
 
-app = typer.Typer()
+
+app = typer.Typer(rich_markup_mode="markdown")
+
 
 @app.command()
 def run():
@@ -123,7 +174,9 @@ def run():
         smtp_server.sendmail(
             config["gmail_user"], config["kindle_email"], msg.as_string()
         )
-    print(f"Succesfullu produced '{pt.name}' and sent it to '{config["kindle_email"]}'.")
+    print(
+        f"Succesfullu produced '{pt.name}' and sent it to '{config["kindle_email"]}'."
+    )
     pt.unlink()
 
 
@@ -134,7 +187,6 @@ def configure(
     gmail_user: str = None,
     gmail_pass: str = None,
     kindle_email: str = None,
-    news_categories: list[str] = None,
     global_save: bool = True,
 ):
     cfg = _process_configs(config_paths=_config_paths, _config_creation=True)
@@ -145,29 +197,104 @@ def configure(
             gmail_user=gmail_user,
             gmail_pass=gmail_pass,
             kindle_email=kindle_email,
-            news_categories=news_categories,
+            news_categories=[],
         )
     )
-    
-    if global_save:
-        _config_paths[0].parent.mkdir(parents=True, exist_ok=True)
-        with _config_paths[0].open("w") as f:
-            dump(cfg, f, indent=4,  ensure_ascii=False)
-            print(f"Config successfully written in '{_config_paths[0]}'")
-    else:
-        _config_paths[1].parent.mkdir(parents=True, exist_ok=True)
-        with _config_paths[1].open("w") as f:
-            dump(cfg, f, indent=4, ensure_ascii=False)
-            print(f"Config successfully written in '{_config_paths[1]}'")
+    _save_config(cfg, global_save=global_save)
+
 
 @app.command()
-def schedule(hour: int=8, minute: int=0):
-    assert (0 <= hour < 24) and (0 <= minute < 60), f"Invalid time: '{hour:02d}:{minute:02d}'"
+def news_categories(
+    categories: Annotated[list[str], typer.Argument(help="Select categories")],
+    global_save: bool = True,
+):
+    """
+    Select a smaller list of news categories. Possible values are:
+
+    * HARVARD
+
+    * Αθλητισμος
+
+    * Αμυνα
+
+    * Αποψεις
+
+    * Αστυνομικο
+
+    * Ατζεντα
+
+    * Βιβλιο
+
+    * Γαστρονομος
+
+    * Γραφηματα
+
+    * Διεθνης Οικονομια
+
+    * Δικαστικο
+
+    * Εκπαιδευση
+
+    * Ελληνικη Οικονομια
+
+    * Εξωτερικη Πολιτικη
+
+    * Επιστημη
+
+    * Επιχειρησεις
+
+    * Ιστορια
+
+    * Κοινωνια
+
+    * Κοσμος
+
+    * Κυβερνηση
+
+    * Με την «Κ»
+
+    * Οικονομια
+
+    * Περιοδικο «Κ»
+
+    * Πολιτικη
+
+    * Πολιτισμος
+
+    * Στηλες
+
+    * Ταξιδια
+
+    * Υγεια
+    """
+
+    cfg = _process_configs(config_paths=_config_paths)
+    good_categories = []
+    for c in categories:
+        if c in _allowed_categories:
+            good_categories.append(c)
+        else:
+            print(f"{c} is not a valid category. Ignoring it.")
+
+    cfg.update(
+        dict(
+            news_categories=[c for c in good_categories],
+        )
+    )
+    _save_config(cfg, global_save=global_save)
+
+
+@app.command()
+def schedule(hour: int = 8, minute: int = 0):
+    assert (0 <= hour < 24) and (
+        0 <= minute < 60
+    ), f"Invalid time: '{hour:02d}:{minute:02d}'"
     with CronTab(user=True) as cron:
         cron.remove_all(command=sys.executable)
-        job = cron.new(command=f'{sys.executable} -m kathimeripy run')
+        job = cron.new(command=f"{sys.executable} -m kathimeripy run")
         job.hour.on(hour)
         job.minute.on(minute)
     print(f"Set to run every day at: '{hour:02d}:{minute:02d}'")
+
 
 app()
