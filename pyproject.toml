@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kathimeripy"
-version = "0.5.0"
+version = "0.5.1"
 description = "A package that uses you user name and password for Kathimerini.gr to generate an Epub and send it to your Amazon Kindle."
 authors = ["Kdra <drakopuloskostas+gh@gmail.com>"]
 readme = "README.md"
