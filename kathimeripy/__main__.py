@@ -296,5 +296,5 @@ def schedule(hour: int = 8, minute: int = 0):
         job.minute.on(minute)
     print(f"Set to run every day at: '{hour:02d}:{minute:02d}'")
 
-
-app()
+if __name__ == '__main__':
+    app()
